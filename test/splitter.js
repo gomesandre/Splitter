@@ -40,4 +40,22 @@ contract("Splitter", function(_accounts) {
       assert.equal(thirdMember.account, _accounts[3]);
     })
   })
+
+  describe('Check if isMember modifier is working', function() {
+    it('should call function split', async () => {
+      addMember("Delta", _accounts[1]);
+      const splitResponse = await SplitterInstance.split({ from: _accounts[1] });
+      assert.equal(splitResponse, "Account registered as member of contract!");
+    })
+
+    it('should not call function split', async () => {
+      try {
+        await SplitterInstance.split({ from: _accounts[0] });
+      } catch (err) {
+        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert This method is restricted to contract members.");
+      }
+    })
+
+  }) 
+
 });
