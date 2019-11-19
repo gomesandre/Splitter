@@ -4,20 +4,17 @@ contract Splitter {
   struct Member {
     address payable account;
     string name;
-    uint balance;
   }
 
-  Member[] public members;
+  mapping (address => Member) public members;
+  uint public membersCount;
 
   function totalMembers() public view returns (uint) {
-      return members.length;
+      return membersCount;
   }
 
   function enter(string memory _name) public {
-    members.push(Member({
-      name: _name,
-      account: msg.sender,
-      balance: 0
-    }));
+    members[msg.sender] = Member(msg.sender, _name);
+    membersCount++;
   }
 }

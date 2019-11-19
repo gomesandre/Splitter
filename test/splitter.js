@@ -4,6 +4,14 @@ contract("Splitter", function(_accounts) {
 
   var SplitterInstance;
 
+  const addMember = async (name, account) => {
+    await SplitterInstance.enter(name, { from: account });
+  };
+
+  const getMember = async (account) => {
+    return await SplitterInstance.members(account);
+  };
+
   beforeEach( async () => {
     SplitterInstance = await Splitter.new({ from: _accounts[0] });
   })
@@ -19,21 +27,17 @@ contract("Splitter", function(_accounts) {
     })
 
     it('should add new members', async () => {
-      const memberAlpha = await SplitterInstance.enter('Alpha');
-      const firstMember = await SplitterInstance.members(0);
+      addMember("Alpha", _accounts[1]); 
+      addMember("Bravo", _accounts[2]);
+      addMember("Chralie", _accounts[3]);
+   
+      const firstMember = await getMember(_accounts[1]);
+      const secondMember = await getMember(_accounts[2]);
+      const thirdMember = await getMember(_accounts[3]);
 
-      const memberBravo = await SplitterInstance.enter('Bravo');
-      const secondMember = await SplitterInstance.members(1);
-
-      const memberCharlie = await SplitterInstance.enter('Charlie');
-      const thirdMember = await SplitterInstance.members(2);
-
-      assert.equal(firstMember.name, 'Alpha');
-      assert.equal(secondMember.name, 'Bravo');
-      assert.equal(thirdMember.name, 'Charlie');
-
-      const members = await SplitterInstance.totalMembers();
-      assert.equal(members, 3);
+      assert.equal(firstMember.account, _accounts[1]);
+      assert.equal(secondMember.account, _accounts[2]);
+      assert.equal(thirdMember.account, _accounts[3]);
     })
   })
 });
