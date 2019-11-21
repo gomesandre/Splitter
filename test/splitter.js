@@ -32,9 +32,9 @@ contract("Splitter", function(_accounts) {
     })
 
     it('should add new members', async () => {
-      addMember("Alpha", _accounts[1]); 
-      addMember("Bravo", _accounts[2]);
-      addMember("Chralie", _accounts[3]);
+      addMember("Alice", _accounts[1]); 
+      addMember("Bob", _accounts[2]);
+      addMember("Carol", _accounts[3]);
    
       const firstMember = await getMember(_accounts[1]);
       const secondMember = await getMember(_accounts[2]);
@@ -68,13 +68,13 @@ contract("Splitter", function(_accounts) {
     })
 
     it('should call function and split ether', async () => {
-      addMember("Foxtrot", _accounts[3]);
-      addMember("Golf", _accounts[4]);
-      addMember("Hotel", _accounts[5]);
+      addMember("Alice", _accounts[3]);
+      addMember("Bob", _accounts[4]);
+      addMember("Carol", _accounts[5]);
       
-      const foxtrot = await getBalance(_accounts[3]);
-      const golf = await getBalance(_accounts[4]);
-      const hotel = await getBalance(_accounts[5]);
+      const alice = await getBalance(_accounts[3]);
+      const bob = await getBalance(_accounts[4]);
+      const carol = await getBalance(_accounts[5]);
       
       try {
         await SplitterInstance.split({ from: _accounts[5], value: 2000000000000000000 });
@@ -82,9 +82,9 @@ contract("Splitter", function(_accounts) {
         assert(err);
       }
 
-      assert(foxtrot < await getBalance(_accounts[3]));
-      assert(golf < await getBalance(_accounts[4]));
-      assert(hotel > await getBalance(_accounts[5]));
+      assert(alice < await getBalance(_accounts[3]));
+      assert(bob < await getBalance(_accounts[4]));
+      assert(carol > await getBalance(_accounts[5]));
     })    
   })
 
