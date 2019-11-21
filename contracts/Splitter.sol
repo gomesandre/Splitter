@@ -3,7 +3,6 @@ pragma solidity ^0.5.0;
 contract Splitter {
   struct Member {
     address payable account;
-    string name;
     bool exists;
   }
 
@@ -14,8 +13,8 @@ contract Splitter {
       return addressIndices.length;
   }
 
-  function enter(string memory _name) public {
-    members[msg.sender] = Member(msg.sender, _name, true);
+  function enter() public {
+    members[msg.sender] = Member(msg.sender, true);
     addressIndices.push(msg.sender);
   }
 
