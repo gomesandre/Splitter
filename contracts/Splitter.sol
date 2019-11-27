@@ -33,7 +33,7 @@ contract Splitter {
   }
 
   function split() public payable onlyMember {
-    require(msg.value >= 0.1 ether, "Send at least 0.1 ether to split!");
+    require(msg.value >= 1 wei, "Send at least 1 wei to split!");
 
     uint length = addressIndices.length - 1;
     uint splitted = msg.value / length;
