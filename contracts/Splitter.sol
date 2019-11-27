@@ -13,13 +13,18 @@ contract Splitter {
       return addressIndices.length;
   }
 
-  function enter() public {
+  function enter() public notMember {
     members[msg.sender] = Member(msg.sender, true);
     addressIndices.push(msg.sender);
   }
 
   modifier onlyMember() {
     require(isMember(), "This method is restricted to contract members!");
+    _;
+  }
+
+  modifier notMember() {
+    require(!isMember(), "This account is already registered as a member.");
     _;
   }
 

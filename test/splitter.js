@@ -1,4 +1,5 @@
 const Splitter = artifacts.require("Splitter");
+const truffleAssert = require('truffle-assertions');
 
 contract("Splitter", function(_accounts) {
   
@@ -33,25 +34,36 @@ contract("Splitter", function(_accounts) {
     })
   })
 
-  describe('Check if isMember modifier is working', function() {
+  describe('Check if modifiers are working well', function() {
     it('should not call function split because user is not a member', async () => {
-      try {
-        await splitterInstance.split({ from: _accounts[0] });
-      } catch (err) {
-        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert This method is restricted to contract members! -- Reason given: This method is restricted to contract members!.");
-      }
+      await truffleAssert.reverts(
+        splitterInstance.split({from: _accounts[0]}),
+        null,
+        "This method is restricted to contract members!"
+      );
     })
+
+    it('should not enter same account twice', async () => {
+      await splitterInstance.enter({from: _accounts[0]});
+      
+      await truffleAssert.reverts(
+        splitterInstance.enter({from: _accounts[0]}),
+        null,
+        "This account is already registered as a member."
+      );
+    })
+
   })
     
   describe('Check if split function is working well', function() {
     it('should call function split and return minimum value error', async () => {
       await splitterInstance.enter({ from: _accounts[1] });
       
-      try {
-        await splitterInstance.split({ from: _accounts[1] });
-      } catch (err) {
-        assert.equal(err.message, "Returned error: VM Exception while processing transaction: revert Send at least 0.1 ether to split! -- Reason given: Send at least 0.1 ether to split!.")
-      }
+      await truffleAssert.reverts(
+        splitterInstance.split(),
+        null,
+        "Send at least 0.1 ether to split!"
+      );
     })
 
     it('should call function and split ether', async () => {
@@ -59,19 +71,18 @@ contract("Splitter", function(_accounts) {
       await splitterInstance.enter({ from: _accounts[4] });
       await splitterInstance.enter({ from: _accounts[5] });
       
-      const alice = await web3.eth.getBalance(_accounts[3]);
-      const bob = await web3.eth.getBalance(_accounts[4]);
-      const carol = await web3.eth.getBalance(_accounts[5]);
+      let alice = web3.utils.fromWei(await web3.eth.getBalance(_accounts[3]));
+      let bob = web3.utils.fromWei(await web3.eth.getBalance(_accounts[4]));
+      let carol = web3.utils.fromWei(await web3.eth.getBalance(_accounts[5]));
       
-      try {
-        await splitterInstance.split({ from: _accounts[5], value: web3.utils.toWei("2", "ether") });
-      } catch (err) {
-        assert(err);
-      }
+      const response = await splitterInstance.split({ from: _accounts[5], value: web3.utils.toWei("2", "ether") });
+      const tx = await web3.eth.getTransaction(response.tx);
+      
+      const txFee = web3.utils.fromWei(web3.utils.toBN(response.receipt.gasUsed * tx.gasPrice));
 
-      assert(alice < await web3.eth.getBalance(_accounts[3]));
-      assert(bob < await web3.eth.getBalance(_accounts[4]));
-      assert(carol > await web3.eth.getBalance(_accounts[5]));
+      assert.equal(alice + 1, web3.utils.fromWei(await web3.eth.getBalance(_accounts[3])));
+      assert.equal(bob + 1, web3.utils.fromWei(await web3.eth.getBalance(_accounts[4])));
+      assert.equal(carol - 2 - txFee, web3.utils.fromWei(await web3.eth.getBalance(_accounts[5])));
     })    
   })
 
