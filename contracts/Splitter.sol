@@ -28,7 +28,7 @@ contract Splitter {
     _;
   }
 
-  function isMember() internal view returns (bool) {
+  function isMember() public view returns (bool) {
     return members[msg.sender].exists;
   }
 
