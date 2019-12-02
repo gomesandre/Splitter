@@ -3,7 +3,6 @@ pragma solidity ^0.5.0;
 contract Splitter {
   struct Member {
     address payable account;
-    bool exists;
   }
 
   mapping (address => Member) public members;
@@ -14,7 +13,7 @@ contract Splitter {
   }
 
   function enter() public notMember {
-    members[msg.sender] = Member(msg.sender, true);
+    members[msg.sender] = Member(msg.sender);
     addressIndices.push(msg.sender);
   }
 
@@ -29,7 +28,7 @@ contract Splitter {
   }
 
   function isMember() public view returns (bool) {
-    return members[msg.sender].exists;
+    return members[msg.sender].account != 0x0000000000000000000000000000000000000000;
   }
 
   function split() public payable onlyMember {

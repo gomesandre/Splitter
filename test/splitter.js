@@ -28,9 +28,9 @@ contract("Splitter", function(_accounts) {
       const secondMember = await splitterInstance.members(_accounts[2]);
       const thirdMember = await splitterInstance.members(_accounts[3]);
 
-      assert.equal(firstMember.account, _accounts[1]);
-      assert.equal(secondMember.account, _accounts[2]);
-      assert.equal(thirdMember.account, _accounts[3]);
+      assert.equal(firstMember, _accounts[1]);
+      assert.equal(secondMember, _accounts[2]);
+      assert.equal(thirdMember, _accounts[3]);
     })
   })
 
