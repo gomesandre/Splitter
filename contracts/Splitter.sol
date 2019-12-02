@@ -17,6 +17,15 @@ contract Splitter {
     addressIndices.push(msg.sender);
   }
 
+  function leave() public onlyMember {
+    delete members[msg.sender];
+
+    for (uint i = 0; i<addressIndices.length-1; i++){
+        addressIndices[i] = addressIndices[i+1];
+    }
+    addressIndices.length--;
+  }
+
   modifier onlyMember() {
     require(isMember(), "This method is restricted to contract members!");
     _;

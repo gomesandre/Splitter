@@ -32,6 +32,14 @@ contract("Splitter", function(_accounts) {
       assert.equal(secondMember, _accounts[2]);
       assert.equal(thirdMember, _accounts[3]);
     })
+
+    it('should leave contract', async () => {
+      await splitterInstance.enter({ from: _accounts[1] });        
+      assert(await splitterInstance.isMember({ from: _accounts[1] }) == true );
+    
+      await splitterInstance.leave({ from: _accounts[1] });
+      assert(await splitterInstance.isMember({ from: _accounts[1] }) == false );
+    })
   })
 
   describe('Check if modifiers are working well', function() {
