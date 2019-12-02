@@ -8,6 +8,16 @@ contract Splitter {
   mapping (address => Member) public members;
   address[] public addressIndices;
 
+  modifier onlyMember() {
+    require(isMember(), "This method is restricted to contract members!");
+    _;
+  }
+
+  modifier notMember() {
+    require(!isMember(), "This account is already registered as a member.");
+    _;
+  }
+
   function totalMembers() public view returns (uint) {
       return addressIndices.length;
   }
@@ -26,22 +36,12 @@ contract Splitter {
     addressIndices.length--;
   }
 
-  modifier onlyMember() {
-    require(isMember(), "This method is restricted to contract members!");
-    _;
-  }
-
-  modifier notMember() {
-    require(!isMember(), "This account is already registered as a member.");
-    _;
-  }
-
   function isMember() public view returns (bool) {
-    return members[msg.sender].account != 0x0000000000000000000000000000000000000000;
+    return members[msg.sender].account != address(0);
   }
 
   function split() public payable onlyMember {
-    require(msg.value >= 1 wei, "Send at least 1 wei to split!");
+    require(msg.value >= addressIndices.length * 1 wei, "Send at least 1 wei per member to split!");
 
     uint length = addressIndices.length - 1;
     uint splitted = msg.value / length;
