@@ -1,55 +1,36 @@
 pragma solidity ^0.5.0;
 
 contract Splitter {
-  struct Member {
-    address payable account;
+  mapping (address => uint) public balances;
+
+  event LogWithdraw(address sender, uint amount);
+  event LogSplittedEther(address sender, address recipientA, address recipientB, uint amount);
+
+  // keep it simple, stupid! 
+  //simplified version without loops, members and expanded specs
+  function split(address recipientA, address recipientB) public payable {
+    require(msg.value >= 2 * 1 wei, "Send at least 1 wei per recipient to split!");
+    require(recipientA != address(0), "Address A can't be blank.");
+    require(recipientB != address(0), "Address B can't be blank.");
+    require(msg.sender != recipientA && msg.sender != recipientB, "Can't split with yourself!");
+
+    uint splitted = msg.value / 2;
+
+    balances[recipientA] += splitted;
+    balances[recipientB] += splitted;
+
+    emit LogSplittedEther(msg.sender, recipientA, recipientB, splitted);
   }
 
-  mapping (address => Member) public members;
-  address[] public addressIndices;
+  // use a “withdraw” pattern instead of a “send” pattern.
+  // https://solidity.readthedocs.io/en/latest/security-considerations.html#pitfalls
+  function withdraw(uint amount) public {
+      require(balances[msg.sender] >= amount, "Insufficient funds.");
 
-  modifier onlyMember() {
-    require(isMember(), "This method is restricted to contract members!");
-    _;
-  }
-
-  modifier notMember() {
-    require(!isMember(), "This account is already registered as a member.");
-    _;
-  }
-
-  function totalMembers() public view returns (uint) {
-      return addressIndices.length;
-  }
-
-  function enter() public notMember {
-    members[msg.sender] = Member(msg.sender);
-    addressIndices.push(msg.sender);
-  }
-
-  function leave() public onlyMember {
-    delete members[msg.sender];
-
-    for (uint i = 0; i<addressIndices.length-1; i++){
-        addressIndices[i] = addressIndices[i+1];
-    }
-    addressIndices.length--;
-  }
-
-  function isMember() public view returns (bool) {
-    return members[msg.sender].account != address(0);
-  }
-
-  function split() public payable onlyMember {
-    require(msg.value >= addressIndices.length * 1 wei, "Send at least 1 wei per member to split!");
-
-    uint length = addressIndices.length - 1;
-    uint splitted = msg.value / length;
-
-    for(uint i = 0; i < addressIndices.length; i++) {
-      if(members[addressIndices[i]].account != msg.sender) {
-        members[addressIndices[i]].account.transfer(splitted);
-      }
-    }
+      // fail early, discount balance before sending
+      // avoid re-entracy https://academy.b9lab.com/courses/course-v1:B9lab+ETH-SUB+2018-07/courseware/7e42c95b41674d7ca6b05d2b7ae9eed7/d0e37ae9325c4fa09ef23f4c5e1d2a22/
+      balances[msg.sender] -= amount;
+      msg.sender.transfer(amount);
+      emit LogWithdraw(msg.sender, amount);
   }
 }

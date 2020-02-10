@@ -2,7 +2,6 @@ const Splitter = artifacts.require("Splitter");
 const truffleAssert = require('truffle-assertions');
 
 contract("Splitter", function(_accounts) {
-  
   let splitterInstance;
 
   beforeEach( async () => {
@@ -12,86 +11,83 @@ contract("Splitter", function(_accounts) {
   describe('Deploying contract', function () {
     it("should deploy contract", async () => {});
   })
-
-  describe('Check if contract has members then add new members', async () => {
-    it('should start without members', async () => {
-      const members = await splitterInstance.totalMembers();
-      assert.equal(members, 0);
-    })
-
-    it('should add new members', async () => {
-      await splitterInstance.enter({ from: _accounts[1] });
-      await splitterInstance.enter({ from: _accounts[2] });
-      await splitterInstance.enter({ from: _accounts[3] });
-            
-      const firstMember = await splitterInstance.members(_accounts[1]);
-      const secondMember = await splitterInstance.members(_accounts[2]);
-      const thirdMember = await splitterInstance.members(_accounts[3]);
-
-      assert.equal(firstMember, _accounts[1]);
-      assert.equal(secondMember, _accounts[2]);
-      assert.equal(thirdMember, _accounts[3]);
-    })
-
-    it('should leave contract', async () => {
-      await splitterInstance.enter({ from: _accounts[1] });        
-      assert(await splitterInstance.isMember({ from: _accounts[1] }) == true );
-    
-      await splitterInstance.leave({ from: _accounts[1] });
-      assert(await splitterInstance.isMember({ from: _accounts[1] }) == false );
-    })
-  })
-
-  describe('Check if modifiers are working well', function() {
-    it('should not call function split because user is not a member', async () => {
-      await truffleAssert.reverts(
-        splitterInstance.split({from: _accounts[0]}),
-        null,
-        "This method is restricted to contract members!"
-      );
-    })
-
-    it('should not enter same account twice', async () => {
-      await splitterInstance.enter({from: _accounts[0]});
-      
-      await truffleAssert.reverts(
-        splitterInstance.enter({from: _accounts[0]}),
-        null,
-        "This account is already registered as a member."
-      );
-    })
-
-  })
-    
+  
   describe('Check if split function is working well', function() {
-    it('should call function split and return minimum value error', async () => {
-      await splitterInstance.enter({ from: _accounts[1] });
-      
-      await truffleAssert.reverts(
-        splitterInstance.split(),
-        null,
-        "Send at least 0.1 ether to split!"
+    it('should fail minimum value error', async () => {
+      await truffleAssert.fails(
+        splitterInstance.split(_accounts[2], _accounts[3], { from: _accounts[1] })
       );
     })
 
-    it('should call function and split ether', async () => {
-      await splitterInstance.enter({ from: _accounts[3] });
-      await splitterInstance.enter({ from: _accounts[4] });
-      await splitterInstance.enter({ from: _accounts[5] });
-      
-      let alice = web3.utils.fromWei(await web3.eth.getBalance(_accounts[3]));
-      let bob = web3.utils.fromWei(await web3.eth.getBalance(_accounts[4]));
-      let carol = web3.utils.fromWei(await web3.eth.getBalance(_accounts[5]));
-      
-      const response = await splitterInstance.split({ from: _accounts[5], value: web3.utils.toWei("2", "ether") });
-      const tx = await web3.eth.getTransaction(response.tx);
-      
-      const txFee = web3.utils.fromWei(web3.utils.toBN(response.receipt.gasUsed * tx.gasPrice));
+    it('should fail can not send to yourself', async () => {
+      await truffleAssert.fails(
+        splitterInstance.split(_accounts[1], _accounts[3], { from: _accounts[1], value: 2 })
+      );
+    })
 
-      assert.equal(alice + 1, web3.utils.fromWei(await web3.eth.getBalance(_accounts[3])));
-      assert.equal(bob + 1, web3.utils.fromWei(await web3.eth.getBalance(_accounts[4])));
-      assert.equal(carol - 2 - txFee, web3.utils.fromWei(await web3.eth.getBalance(_accounts[5])));
-    })    
+    it('should fail missing address for recipient A', async () => {
+      await truffleAssert.fails(
+        splitterInstance.split("0x0000000000000000000000000000000000000000", _accounts[3], { from: _accounts[1], value: 2 })
+      );
+    })
+
+    it('should fail missing address for recipient B', async () => {
+      await truffleAssert.fails(
+        splitterInstance.split(_accounts[2], "0x0000000000000000000000000000000000000000", { from: _accounts[1], value: 2 })
+      );
+    })
+        
+    it('should split ether and add balance', async () => {
+      let startingBalanceBob = web3.utils.fromWei( await splitterInstance.balances(_accounts[4]));
+      let startingBalanceCarol = web3.utils.fromWei( await splitterInstance.balances(_accounts[5]));
+      
+      await splitterInstance.split( _accounts[4], _accounts[5], { from: _accounts[3], value: web3.utils.toWei("2", "ether") });
+
+      let updatedBalanceBob = web3.utils.fromWei( await splitterInstance.balances(_accounts[4]));
+      let updatedBalanceCarol = web3.utils.fromWei( await splitterInstance.balances(_accounts[5]));
+
+      assert.strictEqual(Number(startingBalanceBob) + 1, Number(updatedBalanceBob));
+      assert.strictEqual(Number(startingBalanceCarol) + 1, Number(updatedBalanceCarol));
+    })
+    
+    it('should fail withdrawal (insufficent funds)', async () => {
+      await truffleAssert.fails(
+        splitterInstance.withdraw( web3.utils.toWei("0.1", "ether"), { from: _accounts[3] })
+      );
+    })
+
+    it('should withdrawal part of the balance', async () => {
+      let balanceBeforeSplit = await splitterInstance.balances(_accounts[4]);
+      
+      await splitterInstance.split( _accounts[4], _accounts[5], { from: _accounts[3], value: web3.utils.toWei("2", "ether") });
+
+      let balanceAfterSplit = await splitterInstance.balances(_accounts[4]);
+
+      const response = await splitterInstance.withdraw( web3.utils.toWei("0.1", "ether"), { from: _accounts[4] });
+      
+      let balanceAfterPartialWithdrawal = await splitterInstance.balances(_accounts[4]);
+      
+      assert.strictEqual(web3.utils.fromWei(balanceBeforeSplit, "ether"), "0");
+      assert.strictEqual(web3.utils.fromWei(balanceAfterSplit, "ether"), "1");
+      assert.strictEqual(web3.utils.fromWei(balanceAfterPartialWithdrawal, "ether"), "0.9");
+    })
+
+    it('should withdrawal entire balance', async () => {
+      let balanceBeforeSplit = await splitterInstance.balances(_accounts[4]);
+      
+      await splitterInstance.split( _accounts[4], _accounts[5], { from: _accounts[3], value: web3.utils.toWei("2", "ether") });
+
+      let balanceAfterSplit = await splitterInstance.balances(_accounts[4]);
+
+      const response = await splitterInstance.withdraw( web3.utils.toWei("1", "ether"), { from: _accounts[4] });
+      
+      let balanceAfterPartialWithdrawal = await splitterInstance.balances(_accounts[4]);
+      
+      assert.strictEqual(web3.utils.fromWei(balanceBeforeSplit, "ether"), "0");
+      assert.strictEqual(web3.utils.fromWei(balanceAfterSplit, "ether"), "1");
+      assert.strictEqual(web3.utils.fromWei(balanceAfterPartialWithdrawal, "ether"), "0");
+    })
+
   })
 
 });
