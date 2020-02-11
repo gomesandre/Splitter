@@ -17,7 +17,7 @@ contract Splitter {
     balances[recipientA] += splitted;
     balances[recipientB] += msg.value - splitted;
 
-    emit LogSplittedEther(msg.sender, recipientA, recipientB, splitted);
+    emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value);
   }
 
   function withdraw(uint amount) public {

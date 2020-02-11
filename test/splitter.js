@@ -55,7 +55,7 @@ contract("Splitter", function(accounts) {
       assert.strictEqual(alice, response.logs[0].args.sender);
       assert.strictEqual(bob, response.logs[0].args.recipientA);
       assert.strictEqual(carol, response.logs[0].args.recipientB);  
-      assert.strictEqual(toBN(toWei("1", "ether")).toString(10), response.logs[0].args.amount.toString(10));  
+      assert.strictEqual(toBN(toWei("2", "ether")).toString(10), response.logs[0].args.amount.toString(10));  
     })
     
     it('should start with balance equals to zero', async () => {
