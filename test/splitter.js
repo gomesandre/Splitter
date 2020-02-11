@@ -1,93 +1,117 @@
 const Splitter = artifacts.require("Splitter");
 const truffleAssert = require('truffle-assertions');
 
-contract("Splitter", function(_accounts) {
-  let splitterInstance;
+contract("Splitter", function(accounts) {
+  const { toBN, fromWei, toWei } = web3.utils;
+  let splitterInstance, alice, bob, carol;
 
-  beforeEach( async () => {
-    splitterInstance = await Splitter.new({ from: _accounts[0] });
+  beforeEach("deploy new instance", async () => {
+    [ alice, bob, carol ] = accounts;
+    splitterInstance = await Splitter.new({ from: alice });
   })
   
-  describe('Deploying contract', function () {
-    it("should deploy contract", async () => {});
-  })
-  
-  describe('Check if split function is working well', function() {
+  describe('split tests', function() {
     it('should fail minimum value error', async () => {
       await truffleAssert.fails(
-        splitterInstance.split(_accounts[2], _accounts[3], { from: _accounts[1] })
+        splitterInstance.split(bob, carol, { from: alice })
       );
     })
 
     it('should fail can not send to yourself', async () => {
       await truffleAssert.fails(
-        splitterInstance.split(_accounts[1], _accounts[3], { from: _accounts[1], value: 2 })
+        splitterInstance.split(alice, carol, { from: alice, value: 2 })
       );
     })
 
     it('should fail missing address for recipient A', async () => {
       await truffleAssert.fails(
-        splitterInstance.split("0x0000000000000000000000000000000000000000", _accounts[3], { from: _accounts[1], value: 2 })
+        splitterInstance.split("0x0000000000000000000000000000000000000000", carol, { from: alice, value: 2 })
       );
     })
 
     it('should fail missing address for recipient B', async () => {
       await truffleAssert.fails(
-        splitterInstance.split(_accounts[2], "0x0000000000000000000000000000000000000000", { from: _accounts[1], value: 2 })
+        splitterInstance.split(bob, "0x0000000000000000000000000000000000000000", { from: alice, value: 2 })
       );
     })
         
     it('should split ether and add balance', async () => {
-      let startingBalanceBob = web3.utils.fromWei( await splitterInstance.balances(_accounts[4]));
-      let startingBalanceCarol = web3.utils.fromWei( await splitterInstance.balances(_accounts[5]));
+      let startingBalanceBob = await splitterInstance.balances(bob);
+      let startingBalanceCarol = await splitterInstance.balances(carol);
       
-      await splitterInstance.split( _accounts[4], _accounts[5], { from: _accounts[3], value: web3.utils.toWei("2", "ether") });
+      await splitterInstance.split( bob, carol, { from: alice, value: toWei("2", "ether") });
 
-      let updatedBalanceBob = web3.utils.fromWei( await splitterInstance.balances(_accounts[4]));
-      let updatedBalanceCarol = web3.utils.fromWei( await splitterInstance.balances(_accounts[5]));
+      let updatedBalanceBob = await splitterInstance.balances(bob);
+      let updatedBalanceCarol = await splitterInstance.balances(carol);
 
-      assert.strictEqual(Number(startingBalanceBob) + 1, Number(updatedBalanceBob));
-      assert.strictEqual(Number(startingBalanceCarol) + 1, Number(updatedBalanceCarol));
+      assert.strictEqual(startingBalanceBob.add(toBN(toWei("1", "ether"))).toString(10), updatedBalanceBob.toString(10));
+      assert.strictEqual(startingBalanceCarol.add(toBN(toWei("1", "ether"))).toString(10), updatedBalanceCarol.toString(10));
+    })
+
+    it('should split and emit splitted event', async () => {
+      const response = await splitterInstance.split( bob, carol, { from: alice, value: toWei("2", "ether") });
+
+      assert.strictEqual("LogSplittedEther", response.logs[0].event);
+      assert.strictEqual(alice, response.logs[0].args.sender);
+      assert.strictEqual(bob, response.logs[0].args.recipientA);
+      assert.strictEqual(carol, response.logs[0].args.recipientB);  
+      assert.strictEqual(toBN(toWei("1", "ether")).toString(10), response.logs[0].args.amount.toString(10));  
     })
     
+    it('should start with balance equals to zero', async () => {
+      const balanceBeforeSplit = await splitterInstance.balances(carol);
+      assert.strictEqual(balanceBeforeSplit.toString(10), "0");
+    })
+
     it('should fail withdrawal (insufficent funds)', async () => {
       await truffleAssert.fails(
-        splitterInstance.withdraw( web3.utils.toWei("0.1", "ether"), { from: _accounts[3] })
+        splitterInstance.withdraw( toWei("0.1", "ether"), { from: carol })
       );
     })
 
+    it('should emit withdrawn event', async () => {
+      await splitterInstance.split( bob, carol, { from: alice, value: 200 });
+      
+      const response = await splitterInstance.withdraw(90, { from: bob });
+
+      assert.strictEqual("LogWithdraw", response.logs[0].event);
+      assert.strictEqual(toBN(90).toString(10), response.logs[0].args.amount.toString(10));
+    })
+
     it('should withdrawal part of the balance', async () => {
-      let balanceBeforeSplit = await splitterInstance.balances(_accounts[4]);
+      await splitterInstance.split( bob, carol, { from: alice, value: 200 });
       
-      await splitterInstance.split( _accounts[4], _accounts[5], { from: _accounts[3], value: web3.utils.toWei("2", "ether") });
+      let accountBalance = toBN(await web3.eth.getBalance(bob));
+      let stateBalance = toBN(await splitterInstance.balances(bob));
 
-      let balanceAfterSplit = await splitterInstance.balances(_accounts[4]);
+      const response = await splitterInstance.withdraw(90, { from: bob });
+      const tx = await web3.eth.getTransaction(response.tx);
+      const txFee = toBN(tx.gasPrice).mul(toBN(response.receipt.gasUsed)).toString(10);
+      
+      let stateBalanceUpdated = toBN(await splitterInstance.balances(bob));
+      let accountBalanceUpdated = await web3.eth.getBalance(bob);
 
-      const response = await splitterInstance.withdraw( web3.utils.toWei("0.1", "ether"), { from: _accounts[4] });
-      
-      let balanceAfterPartialWithdrawal = await splitterInstance.balances(_accounts[4]);
-      
-      assert.strictEqual(web3.utils.fromWei(balanceBeforeSplit, "ether"), "0");
-      assert.strictEqual(web3.utils.fromWei(balanceAfterSplit, "ether"), "1");
-      assert.strictEqual(web3.utils.fromWei(balanceAfterPartialWithdrawal, "ether"), "0.9");
+      assert.strictEqual(stateBalance.sub(toBN(90)).toString(10), stateBalanceUpdated.toString(10));
+      assert.strictEqual(accountBalanceUpdated, accountBalance.add(toBN(90).sub(toBN(txFee))).toString(10));
+      assert.strictEqual(stateBalanceUpdated.toString(10), toBN(10).toString(10));
     })
 
     it('should withdrawal entire balance', async () => {
-      let balanceBeforeSplit = await splitterInstance.balances(_accounts[4]);
+      await splitterInstance.split( bob, carol, { from: alice, value: 200 });
       
-      await splitterInstance.split( _accounts[4], _accounts[5], { from: _accounts[3], value: web3.utils.toWei("2", "ether") });
+      let accountBalance = toBN(await web3.eth.getBalance(bob));
+      let stateBalance = toBN(await splitterInstance.balances(bob));
 
-      let balanceAfterSplit = await splitterInstance.balances(_accounts[4]);
+      const response = await splitterInstance.withdraw(100, { from: bob });
+      const tx = await web3.eth.getTransaction(response.tx);
+      const txFee = toBN(tx.gasPrice).mul(toBN(response.receipt.gasUsed)).toString(10);
+      
+      let stateBalanceUpdated = toBN(await splitterInstance.balances(bob));
+      let accountBalanceUpdated = await web3.eth.getBalance(bob);
 
-      const response = await splitterInstance.withdraw( web3.utils.toWei("1", "ether"), { from: _accounts[4] });
-      
-      let balanceAfterPartialWithdrawal = await splitterInstance.balances(_accounts[4]);
-      
-      assert.strictEqual(web3.utils.fromWei(balanceBeforeSplit, "ether"), "0");
-      assert.strictEqual(web3.utils.fromWei(balanceAfterSplit, "ether"), "1");
-      assert.strictEqual(web3.utils.fromWei(balanceAfterPartialWithdrawal, "ether"), "0");
+      assert.strictEqual(stateBalance.sub(toBN(100)).toString(10), stateBalanceUpdated.toString(10));
+      assert.strictEqual(accountBalanceUpdated, accountBalance.add(toBN(100).sub(toBN(txFee))).toString(10));
+      assert.strictEqual(stateBalanceUpdated.toString(10), toBN(0).toString(10));
     })
-
   })
-
 });
