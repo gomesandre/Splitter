@@ -2,7 +2,7 @@ const Splitter = artifacts.require("Splitter");
 const truffleAssert = require('truffle-assertions');
 
 contract("Splitter", function(accounts) {
-  const { toBN, fromWei, toWei } = web3.utils;
+  const { toBN, toWei } = web3.utils;
   const [ alice, bob, carol ] = accounts;
   let splitterInstance;
   
@@ -46,21 +46,47 @@ contract("Splitter", function(accounts) {
       const updatedBalanceBob = await splitterInstance.balances(bob);
       const updatedBalanceCarol = await splitterInstance.balances(carol);
 
-      assert.strictEqual(toBN(0).add(toBN(100)).toString(10), updatedBalanceBob.toString(10));
-      assert.strictEqual(toBN(0).add(toBN(100)).toString(10), updatedBalanceCarol.toString(10));
+      assert.strictEqual(toBN(100).toString(10), updatedBalanceBob.toString(10));
+      assert.strictEqual(toBN(100).toString(10), updatedBalanceCarol.toString(10));
     })
 
     it('should split and emit splitted event', async () => {
-      const { logs: [{event, args}] }  = await splitterInstance.split( bob, carol, { from: alice, value: 200 });
-    
+      const response  = await splitterInstance.split( bob, carol, { from: alice, value: 200 });
+      
+      assert.strictEqual(response.logs.length, 1);
+      
+      const { logs: [{event, args}] } = response;
+
       assert.strictEqual("LogSplittedEther", event);
       assert.strictEqual(alice, args.sender);
       assert.strictEqual(bob, args.recipientA);
       assert.strictEqual(carol, args.recipientB);  
-      assert.strictEqual(toBN(200).toString(10), args.amount.toString(10));  
-    })    
+      assert.strictEqual("200", args.amount.toString(10));  
+      assert.strictEqual("0", args.remainder.toString(10));  
+    })
+
+    it('should split and send remainder back to sender', async () => {      
+      const aliceBalance = await web3.eth.getBalance(alice);
+
+      const response = await splitterInstance.split( bob, carol, { from: alice, value: 5 });
+      const tx = await web3.eth.getTransaction(response.tx);
+      const txFee = toBN(tx.gasPrice).mul(toBN(response.receipt.gasUsed));
+      
+      const updatedBalanceAlice = await web3.eth.getBalance(alice);
+      const updatedBalanceBob = await splitterInstance.balances(bob);
+      const updatedBalanceCarol = await splitterInstance.balances(carol);
+    
+      assert.strictEqual(updatedBalanceAlice.toString(10), toBN(aliceBalance).add(toBN(1)).sub(toBN(5)).sub(toBN(txFee)).toString(10));
+      assert.strictEqual(toBN(2).toString(10), updatedBalanceBob.toString(10));
+      assert.strictEqual(toBN(2).toString(10), updatedBalanceCarol.toString(10)); 
+    })
 
     it('should fail withdrawal (insufficent funds)', async () => {
+      await splitterInstance.split( bob, carol, { from: alice, value: toWei("0.1", "ether") });
+      
+      const contractBalance = await web3.eth.getBalance(splitterInstance.address);
+      assert.strictEqual("100000000000000000", contractBalance.toString(10));
+    
       await truffleAssert.fails(
         splitterInstance.withdraw( toWei("0.1", "ether"), { from: carol })
       );
@@ -68,10 +94,13 @@ contract("Splitter", function(accounts) {
 
     it('should emit withdrawn event', async () => {
       await splitterInstance.split( bob, carol, { from: alice, value: 200 });
+      const response = await splitterInstance.withdraw(90, { from: bob });
       
-      const { logs: [{event, args}] } = await splitterInstance.withdraw(90, { from: bob });
-
-      assert.strictEqual("LogWithdraw", event);
+      assert.strictEqual(response.logs.length, 1);
+      
+      const { logs: [{event, args}] } = response;
+      
+      assert.strictEqual("LogWithdrawn", event);
       assert.strictEqual(toBN(90).toString(10), args.amount.toString(10));
     })
 
