@@ -3,8 +3,8 @@ pragma solidity ^0.5.0;
 contract Splitter {
   mapping (address => uint) public balances;
 
-  event LogWithdraw(address indexed sender, uint amount);
-  event LogSplittedEther(address indexed sender, address indexed recipientA, address indexed recipientB, uint amount);
+  event LogWithdrawn(address indexed sender, uint amount);
+  event LogSplittedEther(address indexed sender, address indexed recipientA, address indexed recipientB, uint amount, uint remainder);
 
   function split(address recipientA, address recipientB) public payable {
     require(msg.value >= 2, "Send at least 1 wei per recipient to split!");
@@ -13,17 +13,21 @@ contract Splitter {
     require(msg.sender != recipientA && msg.sender != recipientB, "Can't split with yourself!");
 
     uint splitted = msg.value / 2;
+    uint remainder = msg.value % 2;
 
     balances[recipientA] += splitted;
-    balances[recipientB] += msg.value - splitted;
+    balances[recipientB] += splitted;
 
-    emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value);
+    emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value, remainder);
+
+    if(remainder > 0)
+      msg.sender.transfer(remainder);
   }
 
   function withdraw(uint amount) public {
       require(balances[msg.sender] >= amount, "Insufficient funds.");
       balances[msg.sender] -= amount;
-      emit LogWithdraw(msg.sender, amount);
+      emit LogWithdrawn(msg.sender, amount);
       msg.sender.transfer(amount);
   }
 }
