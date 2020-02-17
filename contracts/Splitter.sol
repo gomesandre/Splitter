@@ -4,7 +4,7 @@ contract Splitter {
   mapping (address => uint) public balances;
 
   event LogWithdrawn(address indexed sender, uint amount);
-  event LogSplittedEther(address indexed sender, address indexed recipientA, address indexed recipientB, uint amount, uint remainder);
+  event LogSplittedEther(address indexed sender, address indexed recipientA, address indexed recipientB, uint amount);
 
   function split(address recipientA, address recipientB) public payable {
     require(msg.value >= 2, "Send at least 1 wei per recipient to split!");
@@ -18,7 +18,7 @@ contract Splitter {
     balances[recipientA] += splitted;
     balances[recipientB] += splitted;
 
-    emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value, remainder);
+    emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value);
 
     if(remainder > 0)
       msg.sender.transfer(remainder);
