@@ -1,9 +1,10 @@
 const Splitter = artifacts.require("Splitter");
+const Receive = artifacts.require("Receive");
 const truffleAssert = require('truffle-assertions');
 
-contract("Splitter", function(accounts) {
+contract(["Splitter", "Receive"], function(accounts) {
   const { toBN } = web3.utils;
-  const [ alice, bob, carol ] = accounts;
+  const [ alice, bob, carol, recipient ] = accounts;
   let splitterInstance;
   
   beforeEach("deploy new instance", async () => {
@@ -64,18 +65,14 @@ contract("Splitter", function(accounts) {
       assert.strictEqual("200", args.amount.toString(10));  
     })
 
-    it('should split and send remainder back to sender', async () => {      
-      const aliceBalance = toBN(await web3.eth.getBalance(alice));
-
-      const response = await splitterInstance.split( bob, carol, { from: alice, value: 5 });
-      const tx = await web3.eth.getTransaction(response.tx);
-      const txFee = toBN(tx.gasPrice).mul(toBN(response.receipt.gasUsed));
+    it('should split and add remainder to sender balance', async () => {      
+      await splitterInstance.split( bob, carol, { from: alice, value: 5 });
       
-      const updatedBalanceAlice = await web3.eth.getBalance(alice);
+      const updatedBalanceAlice = await splitterInstance.balances(alice);
       const updatedBalanceBob = await splitterInstance.balances(bob);
       const updatedBalanceCarol = await splitterInstance.balances(carol);
     
-      assert.strictEqual(updatedBalanceAlice.toString(10), aliceBalance.add(toBN(1)).sub(toBN(5)).sub(txFee).toString(10));
+      assert.strictEqual("1", updatedBalanceAlice.toString(10));
       assert.strictEqual("2", updatedBalanceBob.toString(10));
       assert.strictEqual("2", updatedBalanceCarol.toString(10)); 
     })
@@ -138,5 +135,13 @@ contract("Splitter", function(accounts) {
       assert.strictEqual(accountBalanceUpdated, accountBalance.add(toBN(100).sub(toBN(txFee))).toString(10));
       assert.strictEqual(stateBalanceUpdated.toString(10), toBN(0).toString(10));
     })
+
+    it('should emit event in correct order', async () => {
+      let receiveInstance = await Receive.new({ from: recipient });
+      const response = await splitterInstance.split(receiveInstance.address, bob, { from: alice, value: 200 });
+      console.log(response.logs);
+
+    })
+
   })
 });

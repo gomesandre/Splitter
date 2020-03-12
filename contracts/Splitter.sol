@@ -17,11 +17,11 @@ contract Splitter {
 
     balances[recipientA] += splitted;
     balances[recipientB] += splitted;
+  
+    if(remainder > 0)
+      balances[msg.sender] += remainder;
 
     emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value);
-
-    if(remainder > 0)
-      msg.sender.transfer(remainder);
   }
 
   function withdraw(uint amount) public {
