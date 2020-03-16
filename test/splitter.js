@@ -137,10 +137,10 @@ contract(["Splitter", "Receive"], function(accounts) {
     })
 
     it('should emit event in correct order', async () => {
-      let receiveInstance = await Receive.new({ from: recipient });
-      const response = await splitterInstance.split(receiveInstance.address, bob, { from: alice, value: 200 });
-      console.log(response.logs);
-
+      const receiveInstance = await Receive.new({ from: recipient });
+      const splitted = await splitterInstance.split(receiveInstance.address, bob, { value: 200 });
+      const response = await receiveInstance.withdrawFromSplitter(20, splitterInstance.address);
+      console.log(response.receipt.logs);
     })
 
   })

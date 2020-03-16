@@ -1,6 +1,10 @@
 pragma solidity ^0.5.0;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 contract Splitter {
+  using SafeMath for uint256;
+
   mapping (address => uint) public balances;
 
   event LogWithdrawn(address indexed sender, uint amount);
@@ -15,19 +19,20 @@ contract Splitter {
     uint splitted = msg.value / 2;
     uint remainder = msg.value % 2;
 
-    balances[recipientA] += splitted;
-    balances[recipientB] += splitted;
+    balances[recipientA] = balances[recipientA].add(splitted);
+    balances[recipientB] = balances[recipientB].add(splitted);
   
     if(remainder > 0)
-      balances[msg.sender] += remainder;
+      balances[msg.sender] += balances[msg.sender].add(remainder);
 
     emit LogSplittedEther(msg.sender, recipientA, recipientB, msg.value);
   }
 
   function withdraw(uint amount) public {
       require(balances[msg.sender] >= amount, "Insufficient funds.");
-      balances[msg.sender] -= amount;
+      balances[msg.sender] = balances[msg.sender].sub(amount);
       emit LogWithdrawn(msg.sender, amount);
       msg.sender.transfer(amount);
+      //msg.sender.call.value(amount)("");
   }
 }
