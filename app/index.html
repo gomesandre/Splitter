@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<title>Splitter</title>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
+</head>
+<body>
+    <div class="main ui" style="padding: 10px;">
+        <div class="introduction">
+            <h1 class="ui dividing header">
+                Splitter
+                <div class="sub header" id="balance"></div>
+            </h1>
+        </div>
+        <br/>   
+        <div class="ui grid">
+            <div class="eight wide column">
+                <div id="status"></div><br/>
+                <div>
+                    <h4>Split Ethereum</h4>
+                    <div class="ui input mini">
+                        <input name="amount" type="number" placeholder="Enter amount..." />
+                        <div class="ui basic label">between</div>
+                    </div>
+                    <div class="ui input mini">
+                        <input name="recipientA" type="text" placeholder="Account A" />
+                        <div class="ui basic label">and</div>
+                    </div>
+                    <div class="ui input mini">
+                        <input name="recipientB" type="text" placeholder="Account B" />
+                    </div>
+                    <button class="ui mini primary button" id="send">Split</button>
+                    <span id="split-errors"></span>
+                </div>
+            </div>
+            <div class="eight wide column" style="border-left: 1px solid #e2e2e2;">
+                <table class="ui very basic collapsing celled table" >
+                    <thead>
+                        <tr>
+                            <td></td>
+                            <td>Splitter | Account</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <h4 class="ui image header">
+                                <div class="content">
+                                    Alice
+                                    <div class="sub header" id="alice-account"></div>
+                                </div>
+                                </h4>
+                            </td>
+                            <td>
+                                <span id="alice-balance"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h4 class="ui image header">
+                                <div class="content">
+                                    Bob
+                                    <div class="sub header" id="bob-account"></div>
+                                </div>
+                                </h4>
+                            </td>
+                            <td>
+                                <span id="bob-balance"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h4 class="ui image header">
+                                <div class="content">
+                                    Carol
+                                    <div class="sub header" id="carol-account"></div>
+                                </div>
+                                </h4>
+                            </td>
+                            <td>
+                                <span id="carol-balance"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>

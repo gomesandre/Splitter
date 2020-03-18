@@ -140,8 +140,10 @@ contract(["Splitter", "Receive"], function(accounts) {
       const receiveInstance = await Receive.new({ from: recipient });
       const splitted = await splitterInstance.split(receiveInstance.address, bob, { value: 200 });
       const response = await receiveInstance.withdrawFromSplitter(20, splitterInstance.address);
-      console.log(response.receipt.logs);
+      const logs = response.receipt.rawLogs;
+      // raw logs shows no event name, so i've tested the order by the contract address
+      assert.strictEqual(logs[0].address, splitterInstance.address);
+      assert.strictEqual(logs[1].address, receiveInstance.address);
     })
-
   })
 });
