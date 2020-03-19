@@ -3,7 +3,9 @@ const truffleContract = require("truffle-contract");
 const $ = require("jquery");
 const splitterJson = require("../../build/contracts/Splitter.json");
 
-if (typeof web3 !== 'undefined') {
+if (typeof ethereum !== 'undefined') {
+  window.web3 = new Web3(ethereum);
+} else if (typeof web3 !== 'undefined') {
   window.web3 = new Web3(web3.currentProvider);
 } else {
   window.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:7545')); 
@@ -12,24 +14,25 @@ if (typeof web3 !== 'undefined') {
 const Splitter = truffleContract(splitterJson);
 Splitter.setProvider(web3.currentProvider);
 
-window.addEventListener('load', () => {
-  balances();
+window.addEventListener('load', async () => {
+  await balances();
   $("#send").click(split);
   $("#withdraw").click(withdraw);
 });
 
 const balances = async () => {
   const { getBalance } = web3.eth;
+  const { fromWei, toBN } = web3.utils;
   const [alice, bob, carol] = await web3.eth.getAccounts();
   const splitter = await Splitter.deployed();
 
   $('#alice-account').html("<small>" + alice + "</small>");
-  $('#alice-balance').html(await splitter.balances(alice) + " wei | " + await getBalance(alice) + " wei");
+  $('#alice-balance').html(fromWei(await splitter.balances(alice)));
   $('#bob-account').html("<small>" + bob + "</small>");
-  $('#bob-balance').html(await splitter.balances(bob) + " wei | " + await getBalance(alice) + " wei");
+  $('#bob-balance').html(fromWei(await splitter.balances(bob)));
   $('#carol-account').html("<small>" + carol + "</small>");
-  $('#carol-balance').html(await splitter.balances(carol) + " wei | " + await getBalance(alice) + " wei");
-  $('#balance').html(await getBalance(splitter.address) + " wei");
+  $('#carol-balance').html(fromWei(await splitter.balances(carol)));
+  $('#balance').html(fromWei(await getBalance(splitter.address)) + " ether");
   $('.alice').html(alice);
   $('.bob').html(bob);
   $('.carol').html(carol);
@@ -38,7 +41,7 @@ const balances = async () => {
 const split = async function() {
   const gas = 300000; 
   let deployed;
-  const { alice } = await web3.eth.getAccounts();
+  const [ alice ] = await web3.eth.getAccounts();
 
   return Splitter.deployed()
     .then(_deployed => {
@@ -74,9 +77,8 @@ const split = async function() {
             $("#status").html("Transfer executed");
         }
         
-        return web3.eth.getBalance(deployed.address);
+        return balances();
     })
-    .then(balance => $("#balance").html(balance.toString(10) + " wei" ))
     .catch(e => {
         $("#status").html(e.toString());
     });

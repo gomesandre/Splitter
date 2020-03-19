@@ -3,7 +3,7 @@ const Receive = artifacts.require("Receive");
 const truffleAssert = require('truffle-assertions');
 
 contract(["Splitter", "Receive"], function(accounts) {
-  const { toBN } = web3.utils;
+  const { toBN, sha3 } = web3.utils;
   const [ alice, bob, carol, recipient ] = accounts;
   let splitterInstance;
   
@@ -141,9 +141,9 @@ contract(["Splitter", "Receive"], function(accounts) {
       const splitted = await splitterInstance.split(receiveInstance.address, bob, { value: 200 });
       const response = await receiveInstance.withdrawFromSplitter(20, splitterInstance.address);
       const logs = response.receipt.rawLogs;
-      // raw logs shows no event name, so i've tested the order by the contract address
-      assert.strictEqual(logs[0].address, splitterInstance.address);
-      assert.strictEqual(logs[1].address, receiveInstance.address);
+      
+      assert.strictEqual(logs[0].topics[0], sha3("LogWithdrawn(address,uint256)"));
+      assert.strictEqual(logs[1].topics[0], sha3("LogReceived(address)"));
     })
   })
 });
