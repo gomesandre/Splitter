@@ -12,7 +12,7 @@
     "truffle": "5.0.8"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.5.0",
+    "@openzeppelin/contracts": "^4.7.3",
     "bignumber.js": "^5.0.0",
     "bluebird": "^3.5.1",
     "rx": "^4.1.0",
